@@ -38,11 +38,24 @@
 			<version>1.14.8</version>
 			<scope>provided</scope>
 		</dependency>
+		<dependency>
+			<groupId>commons-httpclient</groupId>
+			<artifactId>commons-httpclient</artifactId>
+			<version>3.1</version>
+		</dependency>
 	</dependencies>
 
 	<build>
 		<defaultGoal>install</defaultGoal>
 		<finalName>${project.artifactId}</finalName>
+
+		<resources>
+			<resource>
+				<directory>src\main\resources</directory>
+				<filtering>true</filtering>
+			</resource>
+		</resources>
+
 		<plugins>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
@@ -67,6 +80,29 @@
 						</configuration>
 					</execution>
 				</executions>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-shade-plugin</artifactId>
+				<version>2.3</version>
+				<executions>
+					<execution>
+						<phase>package</phase>
+						<goals>
+							<goal>shade</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<outputDirectory>${basedir}/target/hidden</outputDirectory>
+					<minimizeJar>false</minimizeJar>
+					<artifactSet>
+						<includes>
+							<include>commons-httpclient:commons-httpclient</include>
+						</includes>
+					</artifactSet>
+				</configuration>
 			</plugin>
 		</plugins>
 	</build>
