@@ -1,0 +1,9 @@
+.idea/
+target/
+*.iml
+*output.txt
+.classpath
+.project
+bin/
+src/main/java/java/
+*dependency-reduced-pom.xml
