@@ -39,9 +39,14 @@
 			<scope>provided</scope>
 		</dependency>
 		<dependency>
-			<groupId>commons-httpclient</groupId>
-			<artifactId>commons-httpclient</artifactId>
-			<version>3.1</version>
+			<groupId>org.apache.httpcomponents</groupId>
+			<artifactId>httpclient</artifactId>
+			<version>4.3.6</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.httpcomponents</groupId>
+			<artifactId>httpmime</artifactId>
+			<version>4.3.6</version>
 		</dependency>
 	</dependencies>
 
@@ -99,7 +104,8 @@
 					<minimizeJar>false</minimizeJar>
 					<artifactSet>
 						<includes>
-							<include>commons-httpclient:commons-httpclient</include>
+							<include>org.apache.httpcomponents:httpclient</include>
+							<include>org.apache.httpcomponents:httpmime</include>
 						</includes>
 					</artifactSet>
 				</configuration>
