@@ -5,5 +5,4 @@ target/
 .classpath
 .project
 bin/
-src/main/java/java/
 *dependency-reduced-pom.xml

@@ -1,5 +1,5 @@
 name: Minecraft-Change-Skin-API
-version: ${project.version}
+version: '${project.version}'
 description: 'API for plugins to change the skin of a player on minecraft.net'
 author: Janmm14
 website: ''
