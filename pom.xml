@@ -106,7 +106,10 @@
 						<includes>
 							<include>org.apache.httpcomponents:httpclient</include>
 							<include>org.apache.httpcomponents:httpmime</include>
-						</includes>
+							<include>org.apache.httpcomponents:httpcore</include>
+							<include>commons-logging:commons-logging</include>
+							<include>commons-codec:commons-codec</include>
+			</includes>
 					</artifactSet>
 				</configuration>
 			</plugin>
