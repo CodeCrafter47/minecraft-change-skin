@@ -137,6 +137,8 @@ public final class SkinChanger {
 						}
 					}
 				} catch (Exception e) {
+					System.out.println("[MC.NET SKIN CHANGE API] Error while changing skin:");
+					e.printStackTrace();
 					error = e;
 					result = false;
 				}
