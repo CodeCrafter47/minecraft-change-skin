@@ -1,5 +1,6 @@
 package de.janmm14.minecraftchangeskin.api;
 
+import de.janmm14.minecraftchangeskin.bukkit.Main;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
@@ -13,6 +14,7 @@ import org.apache.http.entity.mime.MultipartEntityBuilder;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
+import org.bukkit.plugin.java.JavaPlugin;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
@@ -111,6 +113,7 @@ public final class SkinChanger {
 					//upload
 					HttpPost uploadSkin = new HttpPost("https://minecraft.net/profile/skin");
 					uploadSkin.setConfig(config.build());
+					JavaPlugin.getPlugin(Main.class).getLogger().info("image path: " + params.getImage().getAbsolutePath());
 					uploadSkin.setEntity(MultipartEntityBuilder.create()
 						.addBinaryBody("skin", params.getImage())
 						.addTextBody("authenticityToken", uploadToken)
