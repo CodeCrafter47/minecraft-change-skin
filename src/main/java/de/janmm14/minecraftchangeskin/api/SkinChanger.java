@@ -126,15 +126,18 @@ public final class SkinChanger {
 							"Header:\n" + Arrays.deepToString(uploadSkinResponse.getAllHeaders()) + "\n\n" +
 							"Body:\n" + EntityUtils.toString(uploadSkinResponse.getEntity()));
 					}
+					boolean cookie = false;
 					for (Header h : uploadSkinResponse.getHeaders("Set-Cookie")) {
 						if (h.getValue().trim().toLowerCase(Locale.ENGLISH).contains("success=Your+skin+has+been+changed".toLowerCase(Locale.ENGLISH))) {
 							result = true;
+							cookie = true;
 							break;
-						} else {
-							throw new SkinChangeException("skin upload not successfull!" + "\nResult:\n" +
-								"Header:\n" + Arrays.deepToString(uploadSkinResponse.getAllHeaders()) + "\n\n" +
-								"Body:\n" + EntityUtils.toString(uploadSkinResponse.getEntity()));
 						}
+					}
+					if (!cookie) {
+						throw new SkinChangeException("skin upload not successfull!" + "\nResult:\n" +
+														  "Header:\n" + Arrays.deepToString(uploadSkinResponse.getAllHeaders()) + "\n\n" +
+														  "Body:\n" + EntityUtils.toString(uploadSkinResponse.getEntity()));
 					}
 				} catch (Exception e) {
 					System.out.println("[MC.NET SKIN CHANGE API] Error while changing skin:");
@@ -142,7 +145,6 @@ public final class SkinChanger {
 					error = e;
 					result = false;
 				}
-				// break setSkin; breaks until here
 				if (resultProcessor != null) {
 					resultProcessor.done(result, error);
 				}
