@@ -113,12 +113,14 @@ public final class SkinChanger {
 					//upload
 					HttpPost uploadSkin = new HttpPost("https://minecraft.net/profile/skin");
 					uploadSkin.setConfig(config.build());
-					JavaPlugin.getPlugin(Main.class).getLogger().info("image path: " + params.getImage().getAbsolutePath());
 					uploadSkin.setEntity(MultipartEntityBuilder.create()
-						.addBinaryBody("skin", params.getImage())
-						.addTextBody("authenticityToken", uploadToken)
-						.addTextBody("model", params.getSkinModel().toString())
-						.build());
+											 .addBinaryBody("skin", params.getImage())
+											 .addTextBody("authenticityToken", uploadToken)
+											 .addTextBody("model", params.getSkinModel().toString())
+											 .build());
+					JavaPlugin.getPlugin(Main.class).getLogger().info("UPLOAD SKIN ENTITY: " + EntityUtils.toString(uploadSkin.getEntity()));
+					JavaPlugin.getPlugin(Main.class).getLogger().info("UPLOAD SKIN HEADERS: " + Arrays.deepToString(uploadSkin.getAllHeaders()));
+
 
 					CloseableHttpResponse uploadSkinResponse = client.execute(uploadSkin);
 
