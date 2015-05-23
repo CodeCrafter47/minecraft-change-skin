@@ -13,17 +13,18 @@
 			<id>sonatype-oss-snapshots</id>
 			<url>https://oss.sonatype.org/content/repositories/snapshots/</url>
 		</repository>
+		<repository>
+			<id>spigotmc-hub</id>
+			<url>
+				https://hub.spigotmc.org/nexus/content/groups/public/
+			</url>
+		</repository>
 	</repositories>
 
 	<dependencies>
 		<dependency>
 			<groupId>org.spigotmc</groupId>
 			<artifactId>spigot-api</artifactId>
-			<version>1.8-R0.1-SNAPSHOT</version>
-		</dependency>
-		<dependency>
-			<groupId>org.spigotmc</groupId>
-			<artifactId>spigot</artifactId>
 			<version>1.8-R0.1-SNAPSHOT</version>
 		</dependency>
 		<dependency>
