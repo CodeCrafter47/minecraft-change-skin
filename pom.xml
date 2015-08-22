@@ -15,9 +15,7 @@
 		</repository>
 		<repository>
 			<id>spigotmc-hub</id>
-			<url>
-				https://hub.spigotmc.org/nexus/content/groups/public/
-			</url>
+			<url>https://hub.spigotmc.org/nexus/content/groups/public/</url>
 		</repository>
 	</repositories>
 
@@ -25,7 +23,7 @@
 		<dependency>
 			<groupId>org.spigotmc</groupId>
 			<artifactId>spigot-api</artifactId>
-			<version>1.8.5-R0.1-SNAPSHOT</version>
+			<version>1.8.8-R0.1-SNAPSHOT</version>
 			<scope>provided</scope>
 		</dependency>
 		<dependency>
@@ -56,12 +54,13 @@
 			<groupId>com.google.code.findbugs</groupId>
 			<artifactId>jsr305</artifactId>
 			<version>3.0.0</version>
+			<scope>compile</scope>
 		</dependency>
 	</dependencies>
 
 	<build>
-		<defaultGoal>install</defaultGoal>
-		<finalName>${project.artifactId}</finalName>
+		<defaultGoal>clean install</defaultGoal>
+		<finalName>${project.artifactId}-${project.version}-${env.BUILD_NUMBER}</finalName>
 
 		<resources>
 			<resource>
@@ -76,24 +75,9 @@
 				<artifactId>maven-compiler-plugin</artifactId>
 				<version>3.2</version>
 				<configuration>
-					<compilerVersion>1.7</compilerVersion>
 					<source>1.7</source>
 					<target>1.7</target>
-					<encoding>${project.build.sourceEncoding}</encoding>
 				</configuration>
-				<executions>
-					<execution>
-						<id>default-compile</id>
-						<phase>compile</phase>
-					</execution>
-					<execution>
-						<id>default-testCompile</id>
-						<phase>none</phase>
-						<configuration>
-							<skip>true</skip>
-						</configuration>
-					</execution>
-				</executions>
 			</plugin>
 
 			<plugin>
@@ -109,8 +93,10 @@
 					</execution>
 				</executions>
 				<configuration>
-					<outputDirectory>${basedir}/target/hidden</outputDirectory>
+					<outputDirectory>${project.basedir}/target/hidden</outputDirectory>
 					<minimizeJar>false</minimizeJar>
+					<createDependencyReducedPom>true</createDependencyReducedPom>
+					<keepDependenciesWithProvidedScope>true</keepDependenciesWithProvidedScope>
 					<artifactSet>
 						<includes>
 							<include>org.apache.httpcomponents:httpclient</include>
@@ -118,8 +104,22 @@
 							<include>org.apache.httpcomponents:httpcore</include>
 							<include>commons-logging:commons-logging</include>
 							<include>commons-codec:commons-codec</include>
-			</includes>
+						</includes>
 					</artifactSet>
+					<relocations>
+						<relocation>
+							<pattern>org.apache.http</pattern>
+							<shadedPattern>de.janmm14.minecraftchangeskin.shadedlibs.apachehttp.org.apache.http</shadedPattern>
+						</relocation>
+						<relocation>
+							<pattern>org.apache.commons.codec</pattern>
+							<shadedPattern>de.janmm14.minecraftchangeskin.shadedlibs.apachecommonscodec.org.apache.commons.codec</shadedPattern>
+						</relocation>
+						<relocation>
+							<pattern>org.apache.commons.logging</pattern>
+							<shadedPattern>de.janmm14.minecraftchangeskin.shadedlibs.apachecommonslogging.org.apache.commons.logging</shadedPattern>
+						</relocation>
+					</relocations>
 				</configuration>
 			</plugin>
 		</plugins>
@@ -127,5 +127,6 @@
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<env.BUILD_NUMBER>dev_build</env.BUILD_NUMBER>
 	</properties>
 </project>
