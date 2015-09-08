@@ -12,7 +12,7 @@ public final class Util {
 		throw new UnsupportedOperationException();
 	}
 
-	@SuppressWarnings("unchecked")
+	/*@SuppressWarnings("unchecked")
 	public static String getMultipartEntity(HttpEntity entity) throws ReflectiveOperationException {
 		Class<? extends HttpEntity> clazz = entity.getClass();
 		if (!clazz.getSimpleName().equalsIgnoreCase("MultipartFormEntity")) {
@@ -37,5 +37,5 @@ public final class Util {
 				.append("\n");
 		});
 		return sb.toString();
-	}
+	}*/
 }
