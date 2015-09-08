@@ -1,6 +1,5 @@
 package de.janmm14.minecraftchangeskin.api;
 
-import de.janmm14.minecraftchangeskin.bukkit.Main;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
@@ -14,7 +13,6 @@ import org.apache.http.entity.mime.MultipartEntityBuilder;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
-import org.bukkit.plugin.java.JavaPlugin;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
@@ -24,11 +22,11 @@ import java.util.Locale;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class SkinChanger {
 
-	public static void changeSkin(@NonNull final SkinChangeParams params, @Nullable final Callback<Boolean> resultProcessor) {
+	public static void changeSkin(@NonNull final SkinChangeParams params, @Nullable final Callback<SkinChangerResult> resultProcessor) {
 		new Thread(new Runnable() {
 			@Override
 			public void run() {
-				boolean result = false;
+				SkinChangerResult result = SkinChangerResult.UNKNOWN_ERROR;
 				Exception error = null;
 				CloseableHttpClient client = HttpClients.createDefault();
 				HttpHost proxy = null;
@@ -97,9 +95,19 @@ public final class SkinChanger {
 					// check success
 					if (uploadPageResponse.getStatusLine().getStatusCode() != 200) {
 						uploadPage.releaseConnection();
-						throw new SkinChangeException("upload page not recieved, wrong credentials or minecraft.net down?" + "\nResult:\n" +
-							"Header:\n" + Arrays.deepToString(uploadPageResponse.getAllHeaders()) + "\n\n" +
+						String headers = Arrays.deepToString(uploadPageResponse.getAllHeaders());
+						SkinChangeException exception = new SkinChangeException("upload page not recieved, wrong credentials or minecraft.net down?" + "\nResult:\n" +
+							"Header:\n" + headers + "\n\n" +
 							"Body:\n" + EntityUtils.toString(uploadPageResponse.getEntity()));
+						if (headers.toLowerCase().contains("Location: https://minecraft.net/challenge".toLowerCase())) {
+							result = SkinChangerResult.SECURITY_QUESTIONS;
+							if (resultProcessor != null) {
+								resultProcessor.done(result, exception);
+							}
+							return;
+						} else {
+							throw exception;
+						}
 					}
 					String uploadPageResponseStr = EntityUtils.toString(uploadPageResponse.getEntity());
 					uploadPage.releaseConnection();
@@ -114,12 +122,16 @@ public final class SkinChanger {
 					HttpPost uploadSkin = new HttpPost("https://minecraft.net/profile/skin");
 					uploadSkin.setConfig(config.build());
 					uploadSkin.setEntity(MultipartEntityBuilder.create()
-											 .addBinaryBody("skin", params.getImage())
-											 .addTextBody("authenticityToken", uploadToken)
-											 .addTextBody("model", params.getSkinModel().toString())
-											 .build());
-					JavaPlugin.getPlugin(Main.class).getLogger().info("UPLOAD SKIN ENTITY: " + EntityUtils.toString(uploadSkin.getEntity()));
-					JavaPlugin.getPlugin(Main.class).getLogger().info("UPLOAD SKIN HEADERS: " + Arrays.deepToString(uploadSkin.getAllHeaders()));
+						.addBinaryBody("skin", params.getImage())
+						.addTextBody("authenticityToken", uploadToken)
+						.addTextBody("model", params.getSkinModel().toString())
+						.build());
+					/*try {
+						JavaPlugin.getPlugin(Main.class).getLogger().info("UPLOAD SKIN ENTITY: " + Util.getMultipartEntity(uploadSkin.getEntity()));
+						JavaPlugin.getPlugin(Main.class).getLogger().info("UPLOAD SKIN HEADERS: " + Arrays.deepToString(uploadSkin.getAllHeaders()));
+					} catch (Exception ex) {
+						ex.printStackTrace();
+					}*/
 
 
 					CloseableHttpResponse uploadSkinResponse = client.execute(uploadSkin);
@@ -134,7 +146,7 @@ public final class SkinChanger {
 					boolean cookie = false;
 					for (Header h : uploadSkinResponse.getHeaders("Set-Cookie")) {
 						if (h.getValue().trim().toLowerCase(Locale.ENGLISH).contains("success=Your+skin+has+been+changed".toLowerCase(Locale.ENGLISH))) {
-							result = true;
+							result = SkinChangerResult.SUCCESS;
 							cookie = true;
 							break;
 						}
@@ -148,7 +160,7 @@ public final class SkinChanger {
 					System.out.println("[MC.NET SKIN CHANGE API] Error while changing skin:");
 					e.printStackTrace();
 					error = e;
-					result = false;
+					result = SkinChangerResult.UNKNOWN_ERROR;
 				}
 				if (resultProcessor != null) {
 					resultProcessor.done(result, error);
