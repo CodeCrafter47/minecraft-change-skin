@@ -21,18 +21,6 @@
 
 	<dependencies>
 		<dependency>
-			<groupId>org.spigotmc</groupId>
-			<artifactId>spigot-api</artifactId>
-			<version>1.8.8-R0.1-SNAPSHOT</version>
-			<scope>provided</scope>
-		</dependency>
-		<dependency>
-			<groupId>net.md-5</groupId>
-			<artifactId>bungeecord-api</artifactId>
-			<version>1.8-SNAPSHOT</version>
-			<scope>provided</scope>
-		</dependency>
-		<dependency>
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>
 			<version>1.14.8</version>

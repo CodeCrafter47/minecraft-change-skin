@@ -1,4 +1,0 @@
-name: Minecraft-Change-Skin-API
-version: ${project.version}
-main: de.janmm14.minecraftchangeskin.bungee.Main
-author: Janmm14
