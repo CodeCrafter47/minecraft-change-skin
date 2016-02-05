@@ -161,6 +161,29 @@ public final class SkinChanger {
 					e.printStackTrace();
 					error = e;
 					result = SkinChangerResult.UNKNOWN_ERROR;
+				} finally {
+					try {
+						////////////////////////////////////////////////////////////////////////////////////////////////////
+						// logout page
+						HttpGet logoutPage = new HttpGet("https://minecraft.net/logout");
+
+						logoutPage.setConfig(RequestConfig.DEFAULT);
+
+						CloseableHttpResponse loginPageResponse = client.execute(logoutPage);
+						if (loginPageResponse.getStatusLine().getStatusCode() != 200) {
+							logoutPage.releaseConnection();
+							throw new SkinChangeException("logout page not recieved, minecraft.net down?" + "\nResult:\n" +
+									"Header:\n" + Arrays.deepToString(loginPageResponse.getAllHeaders()) + "\n\n" +
+									"Body:\n" + EntityUtils.toString(loginPageResponse.getEntity()));
+						}
+						loginPageResponse.close();
+						logoutPage.releaseConnection();
+
+						client.close();
+
+					} catch (Exception ex) {
+						ex.printStackTrace();
+					}
 				}
 				if (resultProcessor != null) {
 					resultProcessor.done(result, error);
