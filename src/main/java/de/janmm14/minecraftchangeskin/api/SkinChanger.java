@@ -37,8 +37,6 @@ public final class SkinChanger {
 		new Thread(new Runnable() {
 			@Override
 			public void run() {
-				SkinChangerResult result = SkinChangerResult.UNKNOWN_ERROR;
-				Exception error = null;
 				CloseableHttpClient client = HttpClients.createDefault();
 				HttpHost proxy = null;
 				if (!params.getProxyIp().trim().isEmpty() && params.getProxyPort() > 0) {
@@ -65,7 +63,7 @@ public final class SkinChanger {
 					CloseableHttpResponse authResponse = client.execute(authReq);
 
 					if (authResponse.getStatusLine().getStatusCode() != 200) {
-						throw new SkinChangeException("login page not recieved, minecraft.net down?" + "\nResult:\n" +
+						throw new SkinChangeException("authentication failed:" + "\nResult:\n" +
 								"Header:\n" + Arrays.deepToString(authResponse.getAllHeaders()) + "\n\n" +
 								"Body:\n" + EntityUtils.toString(authResponse.getEntity()));
 					}
@@ -91,7 +89,7 @@ public final class SkinChanger {
 					if (skinResponse.getStatusLine().getStatusCode() != 204) {
 						uploadPage.releaseConnection();
 						String headers = Arrays.deepToString(skinResponse.getAllHeaders());
-						throw new SkinChangeException("upload page not recieved, wrong credentials or minecraft.net down?" + "\nResult:\n" +
+						throw new SkinChangeException("upload failed:" + "\nResult:\n" +
 								"Header:\n" + headers + "\n\n" +
 								"Body:\n" + (skinResponse.getEntity() != null ? EntityUtils.toString(skinResponse.getEntity()) : "null"));
 					}
