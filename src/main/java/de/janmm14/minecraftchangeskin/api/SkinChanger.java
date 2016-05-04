@@ -1,26 +1,37 @@
 package de.janmm14.minecraftchangeskin.api;
 
-import lombok.AccessLevel;
-import lombok.NoArgsConstructor;
-import lombok.NonNull;
-import org.apache.http.Header;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.*;
 import org.apache.http.HttpHost;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.methods.HttpPut;
+import org.apache.http.entity.ContentType;
+import org.apache.http.entity.StringEntity;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 
 import javax.annotation.Nullable;
+import java.io.IOException;
 import java.util.Arrays;
-import java.util.Locale;
+import java.util.List;
 
 @SuppressWarnings("FinalClass")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class SkinChanger {
+
+	private final static ThreadLocal<ObjectMapper> objectMapper = new ThreadLocal<ObjectMapper>() {
+		@Override
+		protected ObjectMapper initialValue() {
+			return new ObjectMapper();
+		}
+	};
 
 	public static void changeSkin(@NonNull final SkinChangeParams params, @Nullable final Callback<SkinChangerResult> resultProcessor) {
 		new Thread(new Runnable() {
@@ -35,160 +46,97 @@ public final class SkinChanger {
 				}
 				try {
 					RequestConfig.Builder config = RequestConfig.copy(RequestConfig.DEFAULT)
-						.setRedirectsEnabled(true)
-						.setCircularRedirectsAllowed(false)
-						.setRelativeRedirectsAllowed(true)
-						.setMaxRedirects(10);
+							.setRedirectsEnabled(true)
+							.setCircularRedirectsAllowed(false)
+							.setRelativeRedirectsAllowed(true)
+							.setMaxRedirects(10);
 					config.setProxy(proxy);
 
 					////////////////////////////////////////////////////////////////////////////////////////////////////
-					// login page
-					HttpGet loginPage = new HttpGet("https://minecraft.net/login");
+					// authenticate
+					Object payload = new AuthenticatePayload(new SkinChanger.Agent("Minecraft"), params.getEmail(), params.getPassword());
 
-					loginPage.setConfig(config.build());
+					HttpPost authReq = new HttpPost("https://authserver.mojang.com/authenticate");
+					authReq.setConfig(config.build());
 
-					CloseableHttpResponse loginPageResponse = client.execute(loginPage);
-					if (loginPageResponse.getStatusLine().getStatusCode() != 200) {
-						loginPage.releaseConnection();
+					StringEntity stringEntity = new StringEntity(objectMapper.get().writeValueAsString(payload));
+					authReq.setEntity(stringEntity);
+					authReq.setHeader("Content-type", "application/json");
+					CloseableHttpResponse authResponse = client.execute(authReq);
+
+					if (authResponse.getStatusLine().getStatusCode() != 200) {
 						throw new SkinChangeException("login page not recieved, minecraft.net down?" + "\nResult:\n" +
-							"Header:\n" + Arrays.deepToString(loginPageResponse.getAllHeaders()) + "\n\n" +
-							"Body:\n" + EntityUtils.toString(loginPageResponse.getEntity()));
+								"Header:\n" + Arrays.deepToString(authResponse.getAllHeaders()) + "\n\n" +
+								"Body:\n" + EntityUtils.toString(authResponse.getEntity()));
 					}
-					String loginPageResponseStr = EntityUtils.toString(loginPageResponse.getEntity());
-					loginPageResponse.close();
-					loginPage.releaseConnection();
-					// extract token
-					int lp_startIndex = loginPageResponseStr.indexOf("<input type=\"hidden\" name=\"authenticityToken\" value=\"");
-					String loginToken = loginPageResponseStr.substring(lp_startIndex);
-					int lp_endIndex = loginToken.indexOf("\">");
-					loginToken = loginToken.substring(53, lp_endIndex);
+
+					AuthenticateResponse auth = objectMapper.get().readValue(EntityUtils.toString(authResponse.getEntity()), AuthenticateResponse.class);
 
 					////////////////////////////////////////////////////////////////////////////////////////////////////
-					//login
-					HttpPost login = new HttpPost("https://minecraft.net/login");
-					login.setConfig(config.build());
-					login.setEntity(MultipartEntityBuilder.create()
-							.addTextBody("authenticityToken", loginToken)
-							.addTextBody("username", params.getEmail())
-							.addTextBody("password", params.getPassword())
+					// upload skin
+					HttpPut uploadPage = new HttpPut("https://api.mojang.com/user/profile/" + auth.getSelectedProfile().getUuid() + "/skin");
+
+					uploadPage.setConfig(config.build());
+					uploadPage.setHeader("Authorization", "Bearer " + auth.getAccessToken());
+
+					stringEntity = new StringEntity(objectMapper.get().writeValueAsString(payload));
+					uploadPage.setEntity(MultipartEntityBuilder.create()
+							.addBinaryBody("file", params.getImage(), ContentType.create("image/png"), params.getImage().getName())
+							.addTextBody("model", params.getSkinModel().toString())
 							.build()
 					);
-					CloseableHttpResponse loginResponse = client.execute(login);
+					CloseableHttpResponse skinResponse = client.execute(uploadPage);
+
 					// check success
-					if (loginResponse.getStatusLine().getStatusCode() != 302) {
-						loginResponse.close();
-						login.releaseConnection();
-						throw new SkinChangeException("login not successfull" + "\nResult:\n" +
-							"Header:\n" + Arrays.deepToString(loginResponse.getAllHeaders()) + "\n\n" +
-							"Body:\n" + EntityUtils.toString(loginResponse.getEntity()));
-					}
-					loginResponse.close();
-					login.releaseConnection();
-
-					////////////////////////////////////////////////////////////////////////////////////////////////////
-					//upload page
-					HttpGet uploadPage = new HttpGet("https://minecraft.net/profile");
-
-					uploadPage.setConfig(config.setRedirectsEnabled(false).setMaxRedirects(0).build());
-
-					CloseableHttpResponse uploadPageResponse = client.execute(uploadPage);
-					// check success
-					if (uploadPageResponse.getStatusLine().getStatusCode() != 200) {
+					if (skinResponse.getStatusLine().getStatusCode() != 204) {
 						uploadPage.releaseConnection();
-						String headers = Arrays.deepToString(uploadPageResponse.getAllHeaders());
-						SkinChangeException exception = new SkinChangeException("upload page not recieved, wrong credentials or minecraft.net down?" + "\nResult:\n" +
-							"Header:\n" + headers + "\n\n" +
-							"Body:\n" + EntityUtils.toString(uploadPageResponse.getEntity()));
-						if (headers.toLowerCase().contains("Location: https://minecraft.net/challenge".toLowerCase())) {
-							result = SkinChangerResult.SECURITY_QUESTIONS;
-							if (resultProcessor != null) {
-								resultProcessor.done(result, exception);
-							}
-							return;
-						} else {
-							throw exception;
-						}
+						String headers = Arrays.deepToString(skinResponse.getAllHeaders());
+						throw new SkinChangeException("upload page not recieved, wrong credentials or minecraft.net down?" + "\nResult:\n" +
+								"Header:\n" + headers + "\n\n" +
+								"Body:\n" + (skinResponse.getEntity() != null ? EntityUtils.toString(skinResponse.getEntity()) : "null"));
 					}
-					String uploadPageResponseStr = EntityUtils.toString(uploadPageResponse.getEntity());
-					uploadPage.releaseConnection();
-					// extract token
-					int up_startIndex = uploadPageResponseStr.indexOf("<input type=\"hidden\" name=\"authenticityToken\" value=\"");
-					String uploadToken = uploadPageResponseStr.substring(up_startIndex);
-					int up_endIndex = uploadToken.indexOf("\">");
-					uploadToken = uploadToken.substring(53, up_endIndex);
-
-					////////////////////////////////////////////////////////////////////////////////////////////////////
-					//upload
-					HttpPost uploadSkin = new HttpPost("https://minecraft.net/profile/skin");
-					uploadSkin.setConfig(config.build());
-					uploadSkin.setEntity(MultipartEntityBuilder.create()
-						.addBinaryBody("skin", params.getImage())
-						.addTextBody("authenticityToken", uploadToken)
-						.addTextBody("model", params.getSkinModel().toString())
-						.build());
-					/*try {
-						JavaPlugin.getPlugin(Main.class).getLogger().info("UPLOAD SKIN ENTITY: " + Util.getMultipartEntity(uploadSkin.getEntity()));
-						JavaPlugin.getPlugin(Main.class).getLogger().info("UPLOAD SKIN HEADERS: " + Arrays.deepToString(uploadSkin.getAllHeaders()));
-					} catch (Exception ex) {
-						ex.printStackTrace();
-					}*/
-
-
-					CloseableHttpResponse uploadSkinResponse = client.execute(uploadSkin);
-
-					// check success
-					if (uploadSkinResponse.getStatusLine().getStatusCode() != 302) {
-						uploadPage.releaseConnection();
-						throw new SkinChangeException("could not upload skin!" + "\nResult:\n" +
-							"Header:\n" + Arrays.deepToString(uploadSkinResponse.getAllHeaders()) + "\n\n" +
-							"Body:\n" + EntityUtils.toString(uploadSkinResponse.getEntity()));
+					// done
+					if (resultProcessor != null) {
+						resultProcessor.done(SkinChangerResult.SUCCESS, null);
 					}
-					boolean cookie = false;
-					for (Header h : uploadSkinResponse.getHeaders("Set-Cookie")) {
-						if (h.getValue().trim().toLowerCase(Locale.ENGLISH).contains("success=Your+skin+has+been+changed".toLowerCase(Locale.ENGLISH))) {
-							result = SkinChangerResult.SUCCESS;
-							cookie = true;
-							break;
-						}
+				} catch (SkinChangeException | IOException ex) {
+					if (resultProcessor != null) {
+						resultProcessor.done(SkinChangerResult.UNKNOWN_ERROR, ex);
 					}
-					if (!cookie) {
-						throw new SkinChangeException("skin upload not successfull!" + "\nResult:\n" +
-														  "Header:\n" + Arrays.deepToString(uploadSkinResponse.getAllHeaders()) + "\n\n" +
-														  "Body:\n" + EntityUtils.toString(uploadSkinResponse.getEntity()));
-					}
-				} catch (Exception e) {
-					System.out.println("[MC.NET SKIN CHANGE API] Error while changing skin:");
-					e.printStackTrace();
-					error = e;
-					result = SkinChangerResult.UNKNOWN_ERROR;
-				} finally {
-					try {
-						////////////////////////////////////////////////////////////////////////////////////////////////////
-						// logout page
-						HttpGet logoutPage = new HttpGet("https://minecraft.net/logout");
-
-						logoutPage.setConfig(RequestConfig.DEFAULT);
-
-						CloseableHttpResponse loginPageResponse = client.execute(logoutPage);
-						if (loginPageResponse.getStatusLine().getStatusCode() != 200) {
-							logoutPage.releaseConnection();
-							throw new SkinChangeException("logout page not recieved, minecraft.net down?" + "\nResult:\n" +
-									"Header:\n" + Arrays.deepToString(loginPageResponse.getAllHeaders()) + "\n\n" +
-									"Body:\n" + EntityUtils.toString(loginPageResponse.getEntity()));
-						}
-						loginPageResponse.close();
-						logoutPage.releaseConnection();
-
-						client.close();
-
-					} catch (Exception ex) {
-						ex.printStackTrace();
-					}
-				}
-				if (resultProcessor != null) {
-					resultProcessor.done(result, error);
 				}
 			}
 		}).start();
+	}
+
+	@Data
+	@RequiredArgsConstructor
+	private static class Agent {
+		private final String name;
+		private final int version = 1;
+	}
+
+	@Data
+	private static class AuthenticatePayload {
+		private final SkinChanger.Agent agent;
+		private final String username;
+		private final String password;
+	}
+
+	@Data
+	@JsonIgnoreProperties(ignoreUnknown = true)
+	private static class AuthenticateResponse {
+		private String accessToken;
+		private String clientToken;
+		private List<SkinChanger.Profile> availableProfiles;
+		private SkinChanger.Profile selectedProfile;
+	}
+
+	@Data
+	@JsonIgnoreProperties(ignoreUnknown = true)
+	private static class Profile {
+		@JsonProperty("id")
+		private String uuid;
+		private String name;
+		private boolean legacy;
 	}
 }

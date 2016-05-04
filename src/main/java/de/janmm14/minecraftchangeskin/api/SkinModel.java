@@ -5,7 +5,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public enum SkinModel {
 
-	STEVE("steve"), ALEX("3pxarm");
+	STEVE(""), ALEX("slim");
 
 	private final String inForm;
 
